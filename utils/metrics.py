@@ -48,29 +48,32 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
     # Create Precision-Recall curve and compute AP for each class
     px, py = np.linspace(0, 1, 1000), []  # for plotting
     ap, p, r = np.zeros((nc, tp.shape[1])), np.zeros((nc, 1000)), np.zeros((nc, 1000))
+    # calculate precision, recall and AP for each iou threshold for each class wrt each confidence threshold
     for ci, c in enumerate(unique_classes):
         i = pred_cls == c
-        n_l = nt[ci]  # number of labels
-        n_p = i.sum()  # number of predictions
+        n_l = nt[ci]  # number of labels, 0 604, 581
+        n_p = i.sum()  # number of predictions, 0 688, 1185
         if n_p == 0 or n_l == 0:
             continue
 
         # Accumulate FPs and TPs
+        # tp[i] == 1 if detection is TP else 0
         fpc = (1 - tp[i]).cumsum(0)
         tpc = tp[i].cumsum(0)
 
         # Recall
-        recall = tpc / (n_l + eps)  # recall curve
-        r[ci] = np.interp(-px, -conf[i], recall[:, 0], left=0)  # negative x, xp because xp decreases
+        recall = tpc / (n_l + eps)  # recall curve, basically calculate the recall for each conf probability
+        r[ci] = np.interp(-px, -conf[i], recall[:, 6], left=0)  # negative x, xp because xp decreases
 
         # Precision
-        precision = tpc / (tpc + fpc)  # precision curve
-        p[ci] = np.interp(-px, -conf[i], precision[:, 0], left=1)  # p at pr_score
+        precision = tpc / (tpc + fpc)  # precision curve, basically calculate the precision for each conf probability
+        p[ci] = np.interp(-px, -conf[i], precision[:, 6], left=1)  # p at pr_score
 
         # AP from recall-precision curve
+        # calculate AP for each iou threshold
         for j in range(tp.shape[1]):
             ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
-            if plot and j == 0:
+            if plot and j == 6:
                 py.append(np.interp(px, mrec, mpre))  # precision at mAP@0.5
 
     # Compute F1 (harmonic mean of precision and recall)
@@ -359,11 +362,11 @@ def plot_pr_curve(px, py, ap, save_dir=Path('pr_curve.png'), names=()):
 
     if 0 < len(names) < 21:  # display per-class legend if < 21 classes
         for i, y in enumerate(py.T):
-            ax.plot(px, y, linewidth=1, label=f'{names[i]} {ap[i, 0]:.3f}')  # plot(recall, precision)
+            ax.plot(px, y, linewidth=1, label=f'{names[i]} {ap[i, 6]:.3f}')  # plot(recall, precision)
     else:
         ax.plot(px, py, linewidth=1, color='grey')  # plot(recall, precision)
 
-    ax.plot(px, py.mean(1), linewidth=3, color='blue', label='all classes %.3f mAP@0.5' % ap[:, 0].mean())
+    ax.plot(px, py.mean(1), linewidth=3, color='blue', label='all classes %.3f mAP@0.8' % ap[:, 6].mean())
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
     ax.set_xlim(0, 1)
