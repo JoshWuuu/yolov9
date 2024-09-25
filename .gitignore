@@ -1,0 +1,14 @@
+*.png
+*.pyc
+*.mat
+*.xlsx
+*.pth
+*.jpg
+*.npy
+*.bmp
+*.txt
+*.csv
+*.pkl
+*.json
+*.pt
+*.zip
